@@ -21,12 +21,17 @@ mkdir -p %{buildroot}%{_unitdir}
 # Kopiowanie binarki GUI
 cp %{_ws}/usr/bin/wifiman-desktop %{buildroot}/usr/bin/
 
-# KLUCZOWA ZMIANA: Kropka po slashu kopiuje wszystko, w tym ukryte pliki .env
+# Kopiowanie całej zawartości katalogu aplikacji
 cp -a %{_ws}/usr/lib/wifiman-desktop/. %{buildroot}/usr/lib/wifiman-desktop/
 
-# Reszta bez zmian
+# Reszta zasobów
 cp -r %{_ws}/usr/share/applications/* %{buildroot}/usr/share/applications/
 cp -r %{_ws}/usr/share/icons/hicolor/* %{buildroot}/usr/share/icons/hicolor/
+
+# Opcjonalny plik polityki SELinux, jeśli istnieje
+if [ -f %{_ws}/usr/lib/wifiman-desktop/wifiman_policy.pp ]; then
+  cp %{_ws}/usr/lib/wifiman-desktop/wifiman_policy.pp %{buildroot}/usr/lib/wifiman-desktop/wifiman_policy.pp
+fi
 
 # Przeniesienie serwisu
 mv %{buildroot}/usr/lib/wifiman-desktop/wifiman-desktop.service %{buildroot}%{_unitdir}/
@@ -36,7 +41,9 @@ mv %{buildroot}/usr/lib/wifiman-desktop/wifiman-desktop.service %{buildroot}%{_u
 semanage fcontext -a -t unconfined_exec_t "/usr/lib/wifiman-desktop/wifiman-desktopd" 2>/dev/null || :
 semanage fcontext -a -t unconfined_exec_t "/usr/lib/wifiman-desktop/wireguard-go" 2>/dev/null || :
 restorecon -Rv /usr/lib/wifiman-desktop/ >/dev/null 2>&1 || :
-semodule -i /usr/lib/wifiman-desktop/wifiman_policy.pp 2>/dev/null || :
+if [ -f /usr/lib/wifiman-desktop/wifiman_policy.pp ]; then
+  semodule -i /usr/lib/wifiman-desktop/wifiman_policy.pp 2>/dev/null || :
+fi
 
 # 2. Capabilities dla Teleportu
 setcap 'cap_net_admin,cap_net_raw+ep' /usr/lib/wifiman-desktop/wifiman-desktopd 2>/dev/null || :
@@ -44,16 +51,12 @@ setcap 'cap_net_admin,cap_net_raw+ep' /usr/lib/wifiman-desktop/wireguard-go 2>/d
 
 # 3. Systemd: Rejestracja i automatyczny start
 %systemd_post wifiman-desktop.service
-# Wymuszamy start, żeby GUI od razu działało
 /usr/bin/systemctl enable --now wifiman-desktop.service >/dev/null 2>&1 || :
 
-
 %preun
-# Zatrzymanie serwisu przed odinstalowaniem
 %systemd_preun wifiman-desktop.service
 
 %postun
-# Przeładowanie systemd po odinstalowaniu
 %systemd_postun_with_restart wifiman-desktop.service
 
 %files
@@ -62,8 +65,8 @@ setcap 'cap_net_admin,cap_net_raw+ep' /usr/lib/wifiman-desktop/wireguard-go 2>/d
 %{_unitdir}/wifiman-desktop.service
 /usr/share/applications/wifiman-desktop.desktop
 /usr/share/icons/hicolor/*/apps/wifiman-desktop.png
-/usr/lib/wifiman-desktop/wifiman_policy.pp
+%ghost %config(noreplace) /usr/lib/wifiman-desktop/wifiman_policy.pp
 
 %changelog
 * Sun Feb 15 2026 Dawid <dawid@example.com> - 1.2.8-1
-- Fix build paths and add SELinux contexts
+- Fix build paths and make SELinux policy optional
