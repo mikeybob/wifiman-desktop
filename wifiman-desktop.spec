@@ -28,8 +28,6 @@ cp -a %{_ws}/usr/lib/wifiman-desktop/. %{buildroot}/usr/lib/wifiman-desktop/
 cp -r %{_ws}/usr/share/applications/* %{buildroot}/usr/share/applications/
 cp -r %{_ws}/usr/share/icons/hicolor/* %{buildroot}/usr/share/icons/hicolor/
 
-cp ${_ws}/wifiman_policy.pp ${buildroot}/usr/lib/wifiman-desktop/wifiman_policy.pp
-
 # Przeniesienie serwisu
 mv %{buildroot}/usr/lib/wifiman-desktop/wifiman-desktop.service %{buildroot}%{_unitdir}/
 
@@ -69,4 +67,3 @@ setcap 'cap_net_admin,cap_net_raw+ep' /usr/lib/wifiman-desktop/wireguard-go 2>/d
 %changelog
 * Sun Feb 15 2026 Dawid <dawid@example.com> - 1.2.8-1
 - Fix build paths and add SELinux contexts
-
